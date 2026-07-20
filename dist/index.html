@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Page Renderer</title>
+  <!-- Noto fonts for multi-script support -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,400;0,700;1,400&family=Noto+Sans+Hebrew:wght@400;700&family=Noto+Sans+JP:wght@400;700&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #1a1a1a;
+      color: #e8e8e8;
+      font-family: system-ui, sans-serif;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar controls ── */
+    #sidebar {
+      width: 280px;
+      min-width: 220px;
+      background: #242424;
+      border-right: 1px solid #333;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 16px;
+      gap: 14px;
+    }
+
+    #sidebar h1 {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-bottom: 4px;
+    }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+      color: #bbb;
+    }
+
+    label span.value {
+      color: #fff;
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    textarea {
+      width: 100%;
+      height: 100px;
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      color: #e8e8e8;
+      font-size: 13px;
+      font-family: inherit;
+      padding: 8px;
+      resize: vertical;
+      outline: none;
+    }
+    textarea:focus { border-color: #666; }
+
+    select, input[type="color"] {
+      background: #1a1a1a;
+      border: 1px solid #3a3a3a;
+      border-radius: 4px;
+      color: #e8e8e8;
+      font-size: 12px;
+      padding: 4px 8px;
+      outline: none;
+      cursor: pointer;
+    }
+    select:focus { border-color: #666; }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: #7c8cf8;
+    }
+
+    .row { display: flex; align-items: center; justify-content: space-between; }
+
+    button {
+      background: #7c8cf8;
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      padding: 8px 12px;
+      width: 100%;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    button:hover { background: #6070e8; }
+    button:active { background: #4f5fce; }
+    button.secondary {
+      background: #333;
+      color: #ccc;
+    }
+    button.secondary:hover { background: #444; }
+
+    hr { border: none; border-top: 1px solid #333; }
+
+    /* ── 3-D viewport ── */
+    #viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+    #viewport canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    #loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(26,26,26,.85);
+      font-size: 14px;
+      color: #888;
+      z-index: 10;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    #loading.hidden { opacity: 0; }
+
+    /* drag-to-orbit hint */
+    #hint {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      color: #555;
+      pointer-events: none;
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-CKER2SSc.js"></script>
+</head>
+<body>
+  <div id="sidebar">
+    <h1>Book Page</h1>
+
+    <div>
+      <div class="section-label">Text</div>
+      <div class="control-group">
+        <textarea id="text-input" placeholder="Type anything — Hebrew, Japanese, Greek…">The quick brown fox jumps over the lazy dog.</textarea>
+
+        <label>
+          Font size
+          <div class="row">
+            <input type="range" id="font-size" min="12" max="72" value="28" step="1" />
+            <span class="value" id="font-size-val">28</span>
+          </div>
+        </label>
+
+        <label>
+          Ink color
+          <input type="color" id="ink-color" value="#1a1005" />
+        </label>
+
+        <label>
+          Ink opacity
+          <div class="row">
+            <input type="range" id="ink-opacity" min="30" max="100" value="82" step="1" />
+            <span class="value" id="ink-opacity-val">82%</span>
+          </div>
+        </label>
+
+        <label>
+          Ink distortion
+          <div class="row">
+            <input type="range" id="ink-distortion" min="0" max="100" value="50" step="1" />
+            <span class="value" id="ink-distortion-val">50%</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <hr />
+
+    <div>
+      <div class="section-label">Paper</div>
+      <div class="control-group">
+        <label>
+          Style
+          <select id="paper-style">
+            <option value="aged">Aged parchment</option>
+            <option value="white">White bond</option>
+            <option value="kraft">Kraft</option>
+          </select>
+        </label>
+
+        <label>
+          Grain intensity
+          <div class="row">
+            <input type="range" id="grain" min="0" max="100" value="55" step="1" />
+            <span class="value" id="grain-val">55%</span>
+          </div>
+        </label>
+
+        <label>
+          Ambient light
+          <div class="row">
+            <input type="range" id="ambient" min="0" max="100" value="40" step="1" />
+            <span class="value" id="ambient-val">40%</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <hr />
+
+    <div>
+      <div class="section-label">Page curve</div>
+      <div class="control-group">
+        <label>
+          Curvature
+          <div class="row">
+            <input type="range" id="curvature" min="0" max="100" value="40" step="1" />
+            <span class="value" id="curvature-val">40%</span>
+          </div>
+        </label>
+
+        <label>
+          Spine taper
+          <div class="row">
+            <input type="range" id="spine" min="0" max="100" value="30" step="1" />
+            <span class="value" id="spine-val">30%</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <hr />
+
+    <div>
+      <div class="section-label">3-D transform</div>
+      <div class="control-group">
+        <label>
+          Rotate X
+          <div class="row">
+            <input type="range" id="rot-x" min="-60" max="60" value="-15" step="1" />
+            <span class="value" id="rot-x-val">-15°</span>
+          </div>
+        </label>
+        <label>
+          Rotate Y
+          <div class="row">
+            <input type="range" id="rot-y" min="-60" max="60" value="10" step="1" />
+            <span class="value" id="rot-y-val">10°</span>
+          </div>
+        </label>
+        <label>
+          Rotate Z
+          <div class="row">
+            <input type="range" id="rot-z" min="-45" max="45" value="0" step="1" />
+            <span class="value" id="rot-z-val">0°</span>
+          </div>
+        </label>
+      </div>
+    </div>
+
+    <hr />
+
+    <div>
+      <div class="section-label">Export</div>
+      <div class="control-group">
+        <label>
+          Resolution
+          <select id="export-res">
+            <option value="1024">1024 × 1024</option>
+            <option value="2048" selected>2048 × 2048</option>
+            <option value="4096">4096 × 4096</option>
+          </select>
+        </label>
+        <button id="btn-render">Re-render</button>
+        <button id="btn-export" class="secondary">Export PNG</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="viewport">
+    <div id="loading">Initialising…</div>
+    <div id="hint">Drag to orbit · Scroll to zoom</div>
+  </div>
+
+</body>
+</html>
