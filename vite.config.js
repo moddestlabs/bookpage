@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  // Project pages are served from /<repo-name>/ on GitHub Pages.
+  base: process.env.GITHUB_ACTIONS ? '/bookpage/' : '/',
   publicDir: 'assets',
   server: {
     // Fix HMR WebSocket behind GitHub Codespaces / forwarded-port proxies.
